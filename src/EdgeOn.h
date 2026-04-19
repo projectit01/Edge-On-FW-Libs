@@ -10,7 +10,10 @@
 
 // ===== Modules =====
 #include "Button/Button.h"
+#include "Common/DeviceIdentity.h"
+#include "RS485Modbus/RS485Modbus.h"
 #include "WifiDevice/WifiDevice.h"
+#include "EthernetDevice/EthernetDevice.h"
 
 
 // ===== Optional: Root Namespace Alias (optional helper) =====

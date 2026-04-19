@@ -1,4 +1,5 @@
 #include "WifiDevice.h"
+#include "../Common/DeviceIdentity.h"
 
 namespace EdgeOn
 {
@@ -106,10 +107,14 @@ namespace EdgeOn
 
     preferences.end();
     preferences.begin("wifi", false);
-    if (getDeviceId.length() < 2 || getZone.length() < 2)
+    if ((getDeviceId.length() < 2 || isInvalidMacId(getDeviceId)) &&
+        deviceId.length() > 0 && !isInvalidMacId(deviceId))
     {
       mqttLog("Save default config");
       preferences.putString("deviceId", deviceId);
+    }
+    if (getZone.length() < 2)
+    {
       preferences.putString("zone", zone);
       preferences.putString("domain", domain);
     }
@@ -161,7 +166,6 @@ namespace EdgeOn
     mqttLog(deviceId);
     mqttClient.setServer(httpBase.c_str(), mqttPort);
     mqttLog("Connecting to MQTT...");
-    // if (mqttClient.connect(deviceId.c_str(), "iotdevice", "123456")) {
     if (mqttClient.connect(deviceId.c_str(), mqttUser, mqttPass))
     {
       mqttLog("✅ MQTT connected");
@@ -172,6 +176,7 @@ namespace EdgeOn
       mqttClient.subscribe((String("platform/+/") + deviceId + "/setting/#").c_str());
       mqttClient.subscribe((String("platform/+/") + deviceId + "/ping").c_str());
       // hook
+      publishConnectedMessage();
       onConnected();
 
       return true;
@@ -557,6 +562,19 @@ namespace EdgeOn
 
       http.end();
     }
+  }
+
+  void WifiDevice::publishConnectedMessage()
+  {
+    String topic = buildConnectedPublishTopic();
+    String payload = buildConnectedPublishPayload();
+
+    if (topic.length() == 0 || payload.length() == 0 || !mqttClient.connected())
+    {
+      return;
+    }
+
+    mqttClient.publish(topic.c_str(), payload.c_str());
   }
 
 }

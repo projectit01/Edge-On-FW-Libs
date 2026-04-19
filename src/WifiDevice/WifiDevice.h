@@ -8,21 +8,11 @@
 #include <Update.h>
 #include <Wire.h>
 #include <ArduinoJson.h>
+#include "../Common/DeviceConstants.h"
+#include "../Common/DevicePins.h"
 
 namespace EdgeOn
 {
-  constexpr unsigned long WIFI_RETRY_INTERVAL = 5UL * 60UL * 1000UL; // 5 phút
-  constexpr unsigned long MQTT_RETRY_INTERVAL = 2000UL;              // 2 giây
-
-#define PAIRING_HOLD_TIME 3000
-
-  struct DevicePins
-  {
-    int ledPairingPin = 2;
-    int pairingPin = 34;
-    String connectSecretKey;
-    String deviceModel;
-  };
   class WifiDevice
   {
   public:
@@ -35,9 +25,8 @@ namespace EdgeOn
       connectSecretKey = cfg.connectSecretKey;
       deviceModel = cfg.deviceModel;
     }
-    void setup(); // entrypoint
-    void loop();  // vòng lặp
-    // ==== Trạng thái thiết bị ====
+    void setup();
+    void loop();
     unsigned long pairingPressStart = 0;
     bool pairingActive = false;
     bool needConfig = false;
@@ -50,18 +39,12 @@ namespace EdgeOn
     String deviceId;
     String zone = "Nzj9gp3RYJjNQ1NDdlYWM2Y2Y3ZWZjZ1";
     String domain = "https://app.phusadtcfarm.com";
-
-    // log 0=dev, 1=test, 2=prod
     String log = "0";
 
-    // ==== Core methods (class con có thể override) ====
     void onMqttMessage(char *topic, byte *payload, unsigned int length);
-
-    // ==== Utility methods (có sẵn) ====
     void handleButtons();
     void loadConfig();
     void saveConfig(String ssid, String pass, String ip);
-
     void startAPMode();
     bool connectWiFi();
     bool reconnectMQTT();
@@ -81,16 +64,34 @@ namespace EdgeOn
       mqttPass = pass;
     }
 
-
     virtual void handleCustomMqttMessage(const String &topic, const String &msg)
     {
-      // mặc định không làm gì
       return;
     }
     virtual void displayLcdMessage(const String &msg, int row = 0, int col = 0)
     {
-      // mặc định không làm gì
       return;
+    }
+    virtual String buildConnectedPublishTopic()
+    {
+      return String("platform/") + zone + "/" + deviceId + "/response/" + buildConnectedPublishTopicExtension();
+    }
+    virtual String buildConnectedPublishTopicExtension()
+    {
+      return "connection-log";
+    }
+    virtual String buildConnectedPublishPayload()
+    {
+      StaticJsonDocument<256> doc;
+      doc["deviceId"] = deviceId;
+      doc["deviceModel"] = deviceModel;
+      doc["firmware"] = fwVersion;
+      doc["ip"] = WiFi.localIP().toString();
+      doc["secret"] = API_SECRET_KEY;
+
+      String payload;
+      serializeJson(doc, payload);
+      return payload;
     }
     virtual void onConnected()
     {
@@ -99,27 +100,23 @@ namespace EdgeOn
     void saveConfigDefault(String deviceId, String zone, String domain);
 
   protected:
-    // ==== Common service ====
+    void publishConnectedMessage();
+
     WiFiClient espClient;
     PubSubClient mqttClient;
     Preferences preferences;
     WebServer server;
 
-    // ==== Config mặc định ====
     const int mqttPort = 1883;
     const char *mqttUser = "iotdevice";
     const char *mqttPass = "123456";
     const char *expectedSecret = "123456";
 
-    // ==== Config ====
     String ssid;
     String password;
     String httpBase;
-
     String connectSecretKey;
     String deviceModel;
-
     String fwVersion = "1.0.0";
   };
-
 }
