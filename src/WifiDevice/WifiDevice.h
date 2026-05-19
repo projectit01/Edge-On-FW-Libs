@@ -32,7 +32,7 @@ namespace EdgeOn
     bool needConfig = false;
     unsigned long lastWiFiRetry;
     unsigned long lastMqttAttempt = 0;
-    int pairingPin;
+    int pairingPin = 5;
     int ledPairingPin;
     bool mqttBusy = false;
 
